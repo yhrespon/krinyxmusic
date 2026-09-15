@@ -1,0 +1,11 @@
+node_modules/
+dist/
+downloads/*
+.env
+.env.*
+!.env.example
+cookies.txt
+*.cookies.txt
+*.cookie
+.DS_Store
+*.log

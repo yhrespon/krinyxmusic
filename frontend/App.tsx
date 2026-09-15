@@ -1,0 +1,26 @@
+import { useEffect, useState } from "react";
+import { Toaster } from "./sonner.tsx";
+import { TooltipProvider } from "./tooltip.tsx";
+import NotFound from "./NotFound.tsx";
+import { Route, Switch } from "wouter";
+import ErrorBoundary from "./ErrorBoundary.tsx";
+import { ThemeProvider } from "./ThemeContext.tsx";
+import Home from "./Home.tsx";
+import { toast } from "sonner";
+
+function Router() { return <Switch><Route path="/" component={Home} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch>; }
+
+function LoginPage({ onLogin }: { onLogin: (user: any) => void }) {
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  async function submit(event: React.FormEvent) { event.preventDefault(); setLoading(true); try { const response = await fetch(`/api/auth/${mode === "login" ? "login" : "register"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) }); const data = await response.json(); if (!response.ok) return toast.error(data.error); if (data.verificationRequired) return toast.success("Email envoyé : vérifiez votre boîte Gmail pour activer votre compte."); onLogin(data.user); toast.success(mode === "login" ? "Connexion réussie" : "Compte créé"); } finally { setLoading(false); } }
+  return <div className="auth-screen"><div className="auth-screen-brand"><div className="brand-mark">K</div><strong>KRINYX MUSIC</strong><span>Votre espace musical privé</span></div><form className="auth-card auth-screen-card" onSubmit={submit}><p className="eyebrow">Espace sécurisé</p><h1>{mode === "login" ? "Bon retour." : "Créer votre compte."}</h1><p className="auth-help">Connectez-vous pour accéder à vos favoris, playlists et téléchargements.</p>{mode === "register" && <div className="auth-email-note">Après votre inscription, vérifiez votre compte depuis votre boîte Gmail pour l’activer.</div>}{mode === "register" && <input required placeholder="Votre nom" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} />}<input required type="email" placeholder="Adresse email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} /><input required minLength={8} type="password" placeholder="Mot de passe (8 caractères minimum)" value={form.password} onChange={event => setForm({ ...form, password: event.target.value })} /><button className="auth-submit" disabled={loading}>{loading ? "Chargement…" : mode === "login" ? "Se connecter" : "Créer mon compte"}</button><button type="button" className="auth-switch" onClick={() => setMode(mode === "login" ? "register" : "login")}>{mode === "login" ? "Créer un compte" : "J’ai déjà un compte"}</button></form></div>;
+}
+
+function WelcomePage({ onStart }: { onStart: () => void }) { return <main className="welcome-screen"><div className="welcome-glow" /><nav className="welcome-nav"><div className="welcome-logo"><span>K</span><strong>KRINYX</strong></div><span className="welcome-nav-note">Votre musique, votre espace</span></nav><section className="welcome-hero"><div className="welcome-copy"><p className="eyebrow">UN ESPACE POUR VOS ÉCOUTES</p><h1>Gardez vos morceaux près de vous.</h1><p className="welcome-lead">Découvrez, organisez et retrouvez les titres qui vous accompagnent. Créez vos playlists, gardez vos favoris et profitez d’une bibliothèque vraiment à vous.</p><button className="welcome-start" onClick={onStart}>Commencer <span>→</span></button><p className="welcome-small">Créez votre espace gratuitement en quelques secondes.</p></div><div className="welcome-art"><div className="art-card art-card-back"><img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=700&q=85" alt="Chanteuse sur scène" /></div><div className="art-card art-card-main"><img src="https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=800&q=85" alt="Vinyle et casque audio" /><div className="art-caption"><span className="art-dot" /><div><strong>Une ambiance à vous</strong><small>Favoris · playlists · souvenirs</small></div></div></div><div className="floating-note">♫ <span>Votre prochaine écoute<br /><strong>commence ici</strong></span></div></div></section><div className="welcome-bottom"><span>Écoutez ce qui vous ressemble.</span><span>Une bibliothèque simple, douce et personnelle.</span></div></main>; }
+
+function AuthGate() { const [checked, setChecked] = useState(false); const [started, setStarted] = useState(false); const [user, setUser] = useState<any>(null); useEffect(() => { fetch("/api/auth/status").then(response => response.json()).then(data => { setUser(data.user || null); setChecked(true); }).catch(() => setChecked(true)); }, []); if (!checked) return <div className="auth-loading">Chargement de votre espace…</div>; return user ? <Router /> : !started ? <WelcomePage onStart={() => setStarted(true)} /> : <LoginPage onLogin={setUser} />; }
+
+function App() { return <ErrorBoundary><ThemeProvider defaultTheme="light" switchable><TooltipProvider><Toaster /><AuthGate /></TooltipProvider></ThemeProvider></ErrorBoundary>; }
+export default App;
